@@ -82,6 +82,12 @@
   Fill them out with the right functional requirements.
 -->
 
+Design and scope MUST remain consistent with `.specify/memory/constitution.md`:
+object-oriented structure, quality-over-speed expectations, day-one scalability,
+**Life OS product surfaces** (Telegram bot, web dashboard, Shortcut/API ingress),
+and **privacy, data minimization, and agent safety** for personal and sensitive
+data.
+
 ### Functional Requirements
 
 - **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]

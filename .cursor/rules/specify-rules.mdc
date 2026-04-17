@@ -1,0 +1,40 @@
+---
+description: Project Development Guidelines
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# life-os Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-04-17
+
+## Active Technologies
+
+- TypeScript 5.x, Node.js 22 LTS + NestJS, Prisma ORM, grammY, pg-boss, Zod (validation), React 19, Vite 6, TanStack Query (main)
+
+## Project Structure
+
+```text
+backend/
+  src/ domain/, application/, infrastructure/, presentation/
+  prisma/
+  test/
+frontend/
+  src/
+  e2e/
+```
+
+## Commands
+
+pnpm test && pnpm run lint (per feature quickstart; adjust when package manifests land)
+
+## Code Style
+
+TypeScript 5.x, Node.js 22 LTS: Follow standard conventions
+
+## Recent Changes
+
+- 001-shopping-voice-dashboard: Added TypeScript 5.x, Node.js 22 LTS + NestJS, Prisma ORM, grammY, pg-boss, Zod (validation), React 19, Vite 6, TanStack Query
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

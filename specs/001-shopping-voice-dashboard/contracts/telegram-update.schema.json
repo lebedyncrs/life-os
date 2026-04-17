@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://life-os.local/schemas/telegram-update-minimal.json",
+  "title": "TelegramUpdateMinimal",
+  "description": "Subset of Telegram Update used for Life OS webhook documentation.",
+  "type": "object",
+  "properties": {
+    "update_id": { "type": "integer" },
+    "message": {
+      "type": "object",
+      "properties": {
+        "message_id": { "type": "integer" },
+        "date": { "type": "integer" },
+        "chat": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "integer" },
+            "type": { "type": "string" }
+          },
+          "required": ["id", "type"]
+        },
+        "text": { "type": "string" },
+        "voice": {
+          "type": "object",
+          "properties": {
+            "file_id": { "type": "string" },
+            "duration": { "type": "integer" }
+          },
+          "required": ["file_id"]
+        }
+      },
+      "required": ["message_id", "date", "chat"]
+    }
+  },
+  "required": ["update_id"]
+}
