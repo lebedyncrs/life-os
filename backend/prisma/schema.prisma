@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ShoppingListItemSource {
+  telegram_voice
+  telegram_text
+  dashboard
+}
+
+enum IdeaSource {
+  telegram
+  dashboard
+}
+
+enum NotificationChannel {
+  telegram
+}
+
+enum ScheduledNotificationStatus {
+  pending
+  sending
+  sent
+  failed
+  cancelled
+}
+
+enum TrainingSessionSource {
+  dashboard
+  telegram
+  shortcut
+}
+
+enum AuditChannel {
+  telegram
+  dashboard
+  system
+}
+
+model Owner {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String   @map("password_hash")
+  telegramChatId    BigInt?  @map("telegram_chat_id")
+  telegramLinkToken String?  @map("telegram_link_token")
+  timezone          String   @default("UTC")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shoppingItems             ShoppingListItem[]
+  ideas                     Idea[]
+  birthdayReminders         BirthdayReminder[]
+  scheduledNotifications    ScheduledNotification[]
+  trainingSessions          TrainingSession[]
+  auditLogs                 AuditLog[]
+}
+
+model ShoppingListItem {
+  id        String                   @id @default(uuid())
+  ownerId   String                   @map("owner_id")
+  title     String                   @db.VarChar(500)
+  isDone    Boolean                  @default(false) @map("is_done")
+  source    ShoppingListItemSource
+  sortOrder Int                      @default(0) @map("sort_order")
+  createdAt DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model Idea {
+  id        String     @id @default(uuid())
+  ownerId   String     @map("owner_id")
+  body      String     @db.Text
+  title     String?    @db.VarChar(200)
+  source    IdeaSource
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model BirthdayReminder {
+  id                  String   @id @default(uuid())
+  ownerId             String   @map("owner_id")
+  personName          String   @map("person_name")
+  nextOccurrenceOn    DateTime @map("next_occurrence_on") @db.Date
+  originalYearKnown   Boolean  @default(true) @map("original_year_known")
+  leadDays            Int      @default(1) @map("lead_days")
+  notes               String?
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner                 Owner                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  scheduledNotifications ScheduledNotification[]
+
+  @@index([ownerId])
+}
+
+model ScheduledNotification {
+  id                 String                        @id @default(uuid())
+  ownerId            String                        @map("owner_id")
+  birthdayReminderId String?                       @map("birthday_reminder_id")
+  fireAt             DateTime                      @map("fire_at") @db.Timestamptz(6)
+  channel            NotificationChannel
+  status             ScheduledNotificationStatus   @default(pending)
+  idempotencyKey     String                        @map("idempotency_key") @db.VarChar(500)
+  lastError          String?                       @map("last_error") @db.VarChar(2000)
+  sentAt             DateTime?                     @map("sent_at") @db.Timestamptz(6)
+  createdAt          DateTime                      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner             Owner              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  birthdayReminder  BirthdayReminder?  @relation(fields: [birthdayReminderId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerId, idempotencyKey])
+  @@index([status, fireAt])
+  @@index([ownerId, fireAt])
+}
+
+model TrainingSession {
+  id          String               @id @default(uuid())
+  ownerId     String               @map("owner_id")
+  occurredOn  DateTime             @map("occurred_on") @db.Date
+  label       String               @default("training")
+  source      TrainingSessionSource
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model AuditLog {
+  id         String       @id @default(uuid())
+  ownerId    String       @map("owner_id")
+  action     String       @db.VarChar(200)
+  entityType String?      @map("entity_type") @db.VarChar(100)
+  entityId   String?      @map("entity_id")
+  channel    AuditChannel
+  metadata   Json         @db.JsonB
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+}
