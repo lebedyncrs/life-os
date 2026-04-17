@@ -63,14 +63,14 @@ description: "Task list for Life OS MVP — core user flows (Telegram + web dash
 
 ### Implementation for User Story 1
 
-- [ ] T020 [US1] Add NLU intent types and `ParsedCommand` union in `backend/src/application/nlu/nlu.types.ts` (include `ADD_SHOPPING`, `UNKNOWN`)
-- [ ] T021 [US1] Define `NluPort` in `backend/src/application/ports/nlu.port.ts` with `parseTelegramText` and `parseTelegramVoiceTranscript` methods
-- [ ] T022 [US1] Implement `backend/src/infrastructure/nlu/openai-nlu.adapter.ts` calling provider with JSON-schema constrained output per `research.md` (no audio retention after transcript)
-- [ ] T023 [US1] Add `ShoppingRepository` port in `backend/src/application/shopping/shopping.repository.ts` and Prisma implementation `backend/src/infrastructure/shopping/prisma-shopping.repository.ts`
-- [ ] T024 [US1] Implement `CaptureShoppingFromTelegramUseCase` in `backend/src/application/shopping/capture-shopping-from-telegram.use-case.ts` (multi-item add, optional replace-all phrase)
-- [ ] T025 [US1] Implement `VoiceIngestService` in `backend/src/presentation/telegram/voice-ingest.service.ts` to download Telegram `file_id`, transcribe via NLU port, delete temp buffers
-- [ ] T026 [US1] Wire `telegram.update-router.ts` to route `message.text` and `message.voice` to the shopping use case when intent is shopping (edge: unintelligible → no DB writes, reply with retry text)
-- [ ] T027 [US1] Emit audit entries from `CaptureShoppingFromTelegramUseCase` via `AuditLogger` for `shopping.create` actions in `backend/src/application/shopping/capture-shopping-from-telegram.use-case.ts`
+- [x] T020 [US1] Add NLU intent types and `ParsedCommand` union in `backend/src/application/nlu/nlu.types.ts` (include `ADD_SHOPPING`, `UNKNOWN`)
+- [x] T021 [US1] Define `NluPort` in `backend/src/application/ports/nlu.port.ts` with `parseTelegramText` and `parseTelegramVoiceTranscript` methods
+- [x] T022 [US1] Implement `backend/src/infrastructure/nlu/openai-nlu.adapter.ts` calling provider with JSON-schema constrained output per `research.md` (no audio retention after transcript)
+- [x] T023 [US1] Add `ShoppingRepository` port in `backend/src/application/shopping/shopping.repository.ts` and Prisma implementation `backend/src/infrastructure/shopping/prisma-shopping.repository.ts`
+- [x] T024 [US1] Implement `CaptureShoppingFromTelegramUseCase` in `backend/src/application/shopping/capture-shopping-from-telegram.use-case.ts` (multi-item add, optional replace-all phrase)
+- [x] T025 [US1] Implement `VoiceIngestService` in `backend/src/presentation/telegram/voice-ingest.service.ts` to download Telegram `file_id`, transcribe via NLU port, delete temp buffers
+- [x] T026 [US1] Wire `telegram.update-router.ts` to route `message.text` and `message.voice` to the shopping use case when intent is shopping (edge: unintelligible → no DB writes, reply with retry text)
+- [x] T027 [US1] Emit audit entries from `CaptureShoppingFromTelegramUseCase` via `AuditLogger` for `shopping.create` actions in `backend/src/application/shopping/capture-shopping-from-telegram.use-case.ts`
 
 **Checkpoint**: US1 satisfied without dashboard (verify via DB or temporary debug endpoint removed before release).
 
@@ -84,11 +84,11 @@ description: "Task list for Life OS MVP — core user flows (Telegram + web dash
 
 ### Implementation for User Story 2
 
-- [ ] T028 [US2] Extend NLU types and OpenAI adapter for `SAVE_IDEA` intent in `backend/src/infrastructure/nlu/openai-nlu.adapter.ts` and `backend/src/application/nlu/nlu.types.ts`
-- [ ] T029 [US2] Add `IdeaRepository` port in `backend/src/application/ideas/idea.repository.ts` + `backend/src/infrastructure/ideas/prisma-idea.repository.ts`
-- [ ] T030 [US2] Implement `SaveIdeaFromTelegramUseCase` in `backend/src/application/ideas/save-idea-from-telegram.use-case.ts`
-- [ ] T031 [US2] Route save-idea branch in `backend/src/presentation/telegram/telegram.update-router.ts` with ambiguity rule: explicit phrase wins over shopping
-- [ ] T032 [US2] Add audit logging for `idea.create` in `backend/src/application/ideas/save-idea-from-telegram.use-case.ts`
+- [x] T028 [US2] Extend NLU types and OpenAI adapter for `SAVE_IDEA` intent in `backend/src/infrastructure/nlu/openai-nlu.adapter.ts` and `backend/src/application/nlu/nlu.types.ts`
+- [x] T029 [US2] Add `IdeaRepository` port in `backend/src/application/ideas/idea.repository.ts` + `backend/src/infrastructure/ideas/prisma-idea.repository.ts`
+- [x] T030 [US2] Implement `SaveIdeaFromTelegramUseCase` in `backend/src/application/ideas/save-idea-from-telegram.use-case.ts`
+- [x] T031 [US2] Route save-idea branch in `backend/src/presentation/telegram/telegram.update-router.ts` with ambiguity rule: explicit phrase wins over shopping
+- [x] T032 [US2] Add audit logging for `idea.create` in `backend/src/application/ideas/save-idea-from-telegram.use-case.ts`
 
 **Checkpoint**: US2 independently testable via Telegram + DB inspection.
 

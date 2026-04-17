@@ -1,6 +1,6 @@
-import { All, Controller, Param, Req, Res } from '@nestjs/common';
+import { All, Controller, Inject, Param, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Bot } from 'grammy';
+import { Bot } from 'grammy';
 import { webhookCallback } from 'grammy';
 import type { Request, Response } from 'express';
 import type { Env } from '../../infrastructure/config/env.schema';
@@ -8,7 +8,7 @@ import type { Env } from '../../infrastructure/config/env.schema';
 @Controller()
 export class TelegramController {
   constructor(
-    private readonly bot: Bot,
+    @Inject(Bot) private readonly bot: Bot,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
