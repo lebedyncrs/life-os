@@ -6,13 +6,20 @@ import { NluPort, type TelegramTextNluInput, type TelegramVoiceNluInput } from '
 import type { Env } from '../config/env.schema';
 
 const llmJsonSchema = z.object({
-  intent: z.enum(['ADD_SHOPPING', 'SAVE_IDEA', 'UNKNOWN']),
+  intent: z.enum(['ADD_SHOPPING', 'SAVE_IDEA', 'SET_BIRTHDAY_REMINDER', 'UNKNOWN']),
   items: z.array(z.string()).optional(),
   replace_all: z.boolean().optional(),
   body: z.string().optional(),
   title: z.string().nullable().optional(),
+  person_name: z.string().optional(),
+  next_occurrence_on: z.string().optional(),
+  original_year_known: z.boolean().optional(),
+  lead_days: z.number().int().optional(),
+  notes: z.string().nullable().optional(),
   reason: z.enum(['empty', 'unintelligible', 'no_shopping_intent', 'ambiguous', 'other']).optional(),
 });
+
+const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
 @Injectable()
 export class OpenAiNluAdapter extends NluPort {
@@ -23,14 +30,14 @@ export class OpenAiNluAdapter extends NluPort {
   }
 
   async parseTelegramText(input: TelegramTextNluInput): Promise<ParsedCommand> {
-    return this.classifyText(input.text);
+    return this.classifyText(input.text, input.ownerTimezone);
   }
 
   async parseTelegramVoiceTranscript(input: TelegramVoiceNluInput): Promise<ParsedCommand> {
-    return this.classifyText(input.transcript);
+    return this.classifyText(input.transcript, input.ownerTimezone);
   }
 
-  private async classifyText(raw: string): Promise<ParsedCommand> {
+  private async classifyText(raw: string, ownerTimezone?: string): Promise<ParsedCommand> {
     const text = raw.trim();
     if (!text) {
       return { intent: 'UNKNOWN', reason: 'empty' };
@@ -47,16 +54,23 @@ export class OpenAiNluAdapter extends NluPort {
     }
 
     const model = this.config.get('NLU_CHAT_MODEL', { infer: true });
+    const tz = ownerTimezone?.trim() || 'UTC';
 
-    const system = `You classify messages for a personal assistant (shopping list + idea capture).
+    const system = `You classify messages for a personal assistant (shopping list, ideas, birthday reminders).
 Return ONLY valid JSON (no markdown) with this shape:
-{"intent":"ADD_SHOPPING"|"SAVE_IDEA"|"UNKNOWN","items":string[]?,"replace_all":boolean?,"body":string?,"title":string|null?,"reason":optional only if intent is UNKNOWN: one of empty|unintelligible|no_shopping_intent|ambiguous|other}
+{"intent":"ADD_SHOPPING"|"SAVE_IDEA"|"SET_BIRTHDAY_REMINDER"|"UNKNOWN", ...fields per intent...,"reason":optional only if UNKNOWN}
 
-Rules:
-- **SAVE_IDEA** when the user clearly wants to save a thought or note, especially phrases like "save this idea", "remember this idea", "note to self", "idea:", "save idea:" followed by content. Put the full idea text in "body" (you may strip the leading cue phrase). Optional short "title" if they gave a headline; otherwise null.
-- **Ambiguity**: If both shopping and idea could apply but the user used an explicit save-idea phrase, choose **SAVE_IDEA**.
-- **ADD_SHOPPING** when they are clearly listing things to buy; "items" = distinct product names, trimmed, no duplicates. "replace_all" true only if they clearly want to replace the entire shopping list.
-- **UNKNOWN** for greetings, unrelated chat, or unclear intent; include "reason".`;
+Field rules:
+- ADD_SHOPPING: "items" string[] (distinct product names), "replace_all" boolean (true only if replacing entire list).
+- SAVE_IDEA: "body" string (idea text, strip leading cues), optional "title" string|null.
+- SET_BIRTHDAY_REMINDER: "person_name" non-empty string, "next_occurrence_on" as YYYY-MM-DD for the NEXT celebration date in timezone ${tz}, "original_year_known" boolean, "lead_days" integer default 1 (days before to remind), optional "notes" string|null.
+- UNKNOWN: optional "reason" one of empty|unintelligible|no_shopping_intent|ambiguous|other
+
+Priority when multiple could fit:
+1) Explicit save-idea phrasing → SAVE_IDEA
+2) Explicit birthday / reminder phrasing (e.g. "remind me", "birthday is", "born on") → SET_BIRTHDAY_REMINDER
+3) Clear shopping list → ADD_SHOPPING
+4) Otherwise UNKNOWN`;
 
     try {
       const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -113,6 +127,26 @@ Rules:
           payload: {
             body: ideaBody,
             title,
+          },
+        };
+      }
+
+      if (v.intent === 'SET_BIRTHDAY_REMINDER') {
+        const personName = (v.person_name ?? '').trim();
+        const nextOn = (v.next_occurrence_on ?? '').trim();
+        if (!personName || !isoDate.test(nextOn)) {
+          return { intent: 'UNKNOWN', reason: 'ambiguous' };
+        }
+        const leadDays = typeof v.lead_days === 'number' && v.lead_days >= 0 ? Math.min(30, v.lead_days) : 1;
+        const notes = v.notes === undefined || v.notes === null ? null : String(v.notes).trim() || null;
+        return {
+          intent: 'SET_BIRTHDAY_REMINDER',
+          payload: {
+            personName,
+            nextOccurrenceOn: nextOn,
+            originalYearKnown: v.original_year_known !== false,
+            leadDays,
+            notes,
           },
         };
       }

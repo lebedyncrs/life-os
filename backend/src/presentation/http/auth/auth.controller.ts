@@ -1,7 +1,9 @@
-import { Body, Controller, Get, HttpCode, Post, Req, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
+import { CurrentOwnerId } from './current-owner.decorator';
 import { LoginDto } from './dto/login.dto';
+import { SessionAuthGuard } from './session-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -43,11 +45,8 @@ export class MeController {
   constructor(private readonly auth: AuthService) {}
 
   @Get('me')
-  async me(@Req() req: Request) {
-    const ownerId = req.session.ownerId;
-    if (!ownerId) {
-      throw new UnauthorizedException();
-    }
+  @UseGuards(SessionAuthGuard)
+  async me(@CurrentOwnerId() ownerId: string) {
     const owner = await this.auth.getOwnerById(ownerId);
     return {
       id: owner.id,

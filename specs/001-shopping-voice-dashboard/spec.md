@@ -18,6 +18,21 @@
   birthdays, and habits** in one place; (5) receive **automatic Telegram
   reminders** without having to open the dashboard.
 
+### Session 2026-04-19 (local integration)
+
+- **Dashboard vs API origin**: On a developer machine the browser dashboard and
+  the HTTP API may run on **different localhost ports** (e.g. Vite chooses 5174
+  when 5173 is busy). Sign-in and session-backed requests MUST still succeed in
+  that configuration, without requiring the owner to manually reconfigure for
+  every port change.
+- **Telegram ingress in dev**: Telegram requires **HTTPS** to the webhook; local
+  development typically uses a short-lived tunnel hostname. The owner (or
+  operator) registers that public URL with Telegram; tunnel forwarding MUST target
+  the same port the API listens on.
+- **Single API process**: One running server instance MUST own the HTTP listen
+  port; starting a second instance on the same port MUST fail fast (operator
+  resolves by stopping the duplicate or changing port).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Add shopping items from Telegram (voice or text) (Priority: P1)
@@ -149,6 +164,10 @@ Telegram delivery and audit trail entry without exposing secrets.
   local-time phrases ask one clarifying follow-up in Telegram when safe.
 - **Privacy**: unbound Telegram senders cannot read or mutate any domain data.
 - **Long messages**: truncation with continuation prompt where needed.
+- **Local dev ports**: dashboard and API on different `localhost` ports must not
+  block sign-in or authenticated dashboard reads/writes (see Assumptions).
+- **Duplicate server**: operator must not run two API processes on the same listen
+  port; second start fails until one is stopped or `PORT` is changed.
 
 ## Requirements *(mandatory)*
 
@@ -188,6 +207,10 @@ data.
   automation for “bad habits,” multi-user sharing, health vitals ingestion, and
   non-Telegram notification channels—those remain future features unless promoted by
   a new specification.
+- **FR-011**: Web dashboard **session authentication** MUST succeed when the
+  dashboard and API run on **different localhost ports** during operator local
+  development; in **production**, only the configured production dashboard origin
+  MUST receive credentialed cross-origin API responses.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -206,7 +229,10 @@ data.
 
 - **SC-001**: First-time owner completes **dashboard sign-in** and sees the four
   sections (with allowed empty states) within **five minutes** given credentials
-  supplied out of band.
+  supplied out of band — **including** when the dashboard client runs on a
+  **non-default local dev port** (e.g. alternate Vite port) while the API stays on
+  another localhost port, as long as browser security rules for cookies still
+  allow the session.
 - **SC-002**: **Nine of ten** scripted Telegram shopping messages (voice or text)
   add the correct item within **two minutes** per agreed phrase set.
 - **SC-003**: **Nine of ten** scripted save-idea messages produce a matching idea
@@ -230,3 +256,8 @@ data.
 - **Network always on** for Telegram and web; offline queues deferred.
 - **Shortcut-based health or habit automation** is optional follow-on, not
   required to mark this MVP complete.
+- **Local development**: The owner may use **localhost** for the dashboard and
+  API on **different ports**; implementation may relax cross-origin rules only
+  for that dev pattern while **production** remains locked to the configured
+  dashboard origin. **Telegram** in dev may use an **HTTPS tunnel** to reach the
+  local API; exact operator steps live in `quickstart.md`.

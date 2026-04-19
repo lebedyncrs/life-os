@@ -73,6 +73,12 @@ interactive dashboard requirements.
 dashboard); HTMX + server templates — fewer moving parts but weaker component
 ecosystem for four-pane home.
 
+**Local dev (2026-04-19)**: Vite may bind to **5174+** when 5173 is taken. The API
+must still accept **credentialed** browser calls from those origins in
+**development** only (localhost / 127.0.0.1 port variants), while **production**
+CORS stays tied to the single configured dashboard origin. This preserves FR-011
+without weakening production session boundaries.
+
 ## 7. Testing strategy
 
 **Decision**: **Vitest** for domain + application services; Nest testing module for

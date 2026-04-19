@@ -29,11 +29,12 @@ export class SaveIdeaFromTelegramUseCase {
     const titleRaw = cmd.payload.title?.trim();
     const title = titleRaw && titleRaw.length > 0 ? titleRaw : null;
 
-    const { id } = await this.ideas.create(ownerId, {
+    const row = await this.ideas.create(ownerId, {
       body,
       title,
       source: IdeaSource.telegram,
     });
+    const { id } = row;
 
     await this.audit.log({
       ownerId,

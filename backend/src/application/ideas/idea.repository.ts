@@ -1,4 +1,4 @@
-import type { IdeaSource } from '@prisma/client';
+import type { Idea, IdeaSource } from '@prisma/client';
 
 export type NewIdea = {
   body: string;
@@ -7,5 +7,9 @@ export type NewIdea = {
 };
 
 export abstract class IdeaRepository {
-  abstract create(ownerId: string, idea: NewIdea): Promise<{ id: string }>;
+  abstract create(ownerId: string, idea: NewIdea): Promise<Idea>;
+
+  abstract listByOwner(ownerId: string): Promise<Idea[]>;
+
+  abstract deleteByIdForOwner(ownerId: string, id: string): Promise<boolean>;
 }

@@ -2,9 +2,10 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ShoppingListItemSource } from '@prisma/client';
 import { Bot } from 'grammy';
 import type { Context } from 'grammy';
+import { RecordBirthdayFromTelegramUseCase } from '../../application/birthdays/record-birthday-from-telegram.use-case';
 import { SaveIdeaFromTelegramUseCase } from '../../application/ideas/save-idea-from-telegram.use-case';
 import { VerifyTelegramChatUseCase } from '../../application/identity/verify-telegram-chat.use-case';
-import { isSaveIdea, type ParsedCommand } from '../../application/nlu/nlu.types';
+import { isSaveIdea, isSetBirthdayReminder, type ParsedCommand } from '../../application/nlu/nlu.types';
 import { NluPort } from '../../application/ports/nlu.port';
 import { CaptureShoppingFromTelegramUseCase } from '../../application/shopping/capture-shopping-from-telegram.use-case';
 import { VoiceIngestService } from './voice-ingest.service';
@@ -19,12 +20,21 @@ export class TelegramUpdateRouterService implements OnModuleInit {
     private readonly nlu: NluPort,
     private readonly captureShopping: CaptureShoppingFromTelegramUseCase,
     private readonly saveIdea: SaveIdeaFromTelegramUseCase,
+    private readonly recordBirthday: RecordBirthdayFromTelegramUseCase,
     private readonly voiceIngest: VoiceIngestService,
   ) {}
 
   onModuleInit(): void {
     this.bot.on('message', (ctx) => {
-      void this.handleMessage(ctx);
+      void this.handleMessage(ctx).catch((err: unknown) => {
+        this.logger.error(
+          `handleMessage failed chat=${ctx.chat?.id}: ${err instanceof Error ? err.message : String(err)}`,
+          err instanceof Error ? err.stack : undefined,
+        );
+        void ctx
+          .reply('Sorry — something went wrong. Try again, or send your list as text.')
+          .catch(() => undefined);
+      });
     });
   }
 
@@ -65,7 +75,7 @@ export class TelegramUpdateRouterService implements OnModuleInit {
         return;
       }
 
-      const cmd = await this.nlu.parseTelegramText({ text });
+      const cmd = await this.nlu.parseTelegramText({ text, ownerTimezone: owner.timezone });
       if (isSaveIdea(cmd)) {
         const ideaOutcome = await this.saveIdea.executeFromParsed(owner.id, cmd);
         if (ideaOutcome.kind === 'saved') {
@@ -73,6 +83,15 @@ export class TelegramUpdateRouterService implements OnModuleInit {
           return;
         }
         await ctx.reply(this.emptyOrUnknownIdeaReply(ideaOutcome.command));
+        return;
+      }
+      if (isSetBirthdayReminder(cmd)) {
+        const b = await this.recordBirthday.executeFromParsed(owner.id, cmd);
+        if (b.kind === 'saved') {
+          await ctx.reply(`Birthday reminder saved for ${b.personName} (next: ${b.nextOccurrenceOn}).`);
+          return;
+        }
+        await ctx.reply(this.unknownBirthdayReply(b.command));
         return;
       }
 
@@ -92,14 +111,17 @@ export class TelegramUpdateRouterService implements OnModuleInit {
       return;
     }
 
-    if ('voice' in msg && msg.voice) {
+    const isVoice = 'voice' in msg && msg.voice;
+    const isShortAudio =
+      'audio' in msg && msg.audio && msg.audio.duration && msg.audio.duration > 0 && msg.audio.duration <= 600;
+    if (isVoice || isShortAudio) {
       const transcript = await this.voiceIngest.transcribeVoiceMessage(ctx);
       if (!transcript) {
         await ctx.reply("Couldn't understand the voice note — try again or type the items.");
         return;
       }
 
-      const cmd = await this.nlu.parseTelegramVoiceTranscript({ transcript });
+      const cmd = await this.nlu.parseTelegramVoiceTranscript({ transcript, ownerTimezone: owner.timezone });
       if (isSaveIdea(cmd)) {
         const ideaOutcome = await this.saveIdea.executeFromParsed(owner.id, cmd);
         if (ideaOutcome.kind === 'saved') {
@@ -107,6 +129,15 @@ export class TelegramUpdateRouterService implements OnModuleInit {
           return;
         }
         await ctx.reply(this.emptyOrUnknownIdeaReply(ideaOutcome.command));
+        return;
+      }
+      if (isSetBirthdayReminder(cmd)) {
+        const b = await this.recordBirthday.executeFromParsed(owner.id, cmd);
+        if (b.kind === 'saved') {
+          await ctx.reply(`Birthday reminder saved for ${b.personName} (next: ${b.nextOccurrenceOn}).`);
+          return;
+        }
+        await ctx.reply(this.unknownBirthdayReply(b.command));
         return;
       }
 
@@ -131,7 +162,16 @@ export class TelegramUpdateRouterService implements OnModuleInit {
     }
 
     this.logger.debug(`Bound message from owner=${owner.id} chat=${chatId} (no text/voice handler)`);
-    await ctx.reply('Send text or a voice note for shopping items or to save an idea (e.g. "save this idea: …").');
+    await ctx.reply(
+      'Send text or a voice note for shopping, ideas ("save this idea: …"), or birthday reminders (e.g. "remind me … birthday").',
+    );
+  }
+
+  private unknownBirthdayReply(command: ParsedCommand): string {
+    if (command.intent === 'UNKNOWN' && command.reason === 'ambiguous') {
+      return 'Could not parse that birthday reminder. Try a person name and a clear date.';
+    }
+    return 'Could not save a birthday reminder from that. Try rephrasing with who and when.';
   }
 
   private emptyOrUnknownIdeaReply(command: ParsedCommand): string {

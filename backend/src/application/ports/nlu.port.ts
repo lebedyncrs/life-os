@@ -3,6 +3,8 @@ import type { ParsedCommand } from '../nlu/nlu.types';
 /** Telegram text message body (trimming is adapter responsibility). */
 export type TelegramTextNluInput = {
   text: string;
+  /** IANA zone for resolving relative birthday phrases (US3). */
+  ownerTimezone?: string;
 };
 
 /**
@@ -11,6 +13,7 @@ export type TelegramTextNluInput = {
  */
 export type TelegramVoiceNluInput = {
   transcript: string;
+  ownerTimezone?: string;
 };
 
 export abstract class NluPort {

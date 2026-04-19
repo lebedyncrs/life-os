@@ -26,6 +26,16 @@ export type SaveIdeaPayload = {
   title?: string | null;
 };
 
+/** Next birthday celebration + reminder metadata from NLU (US3). */
+export type SetBirthdayReminderPayload = {
+  personName: string;
+  /** Next calendar date when the birthday is observed (YYYY-MM-DD). */
+  nextOccurrenceOn: string;
+  originalYearKnown: boolean;
+  leadDays: number;
+  notes?: string | null;
+};
+
 /** Parsed NLU command: exactly one variant. */
 export type ParsedCommand =
   | {
@@ -35,6 +45,10 @@ export type ParsedCommand =
   | {
       intent: 'SAVE_IDEA';
       payload: SaveIdeaPayload;
+    }
+  | {
+      intent: 'SET_BIRTHDAY_REMINDER';
+      payload: SetBirthdayReminderPayload;
     }
   | {
       intent: 'UNKNOWN';
@@ -50,4 +64,11 @@ export function isAddShopping(cmd: ParsedCommand): cmd is Extract<ParsedCommand,
 /** True when the command is safe to act on for idea persistence (US2). */
 export function isSaveIdea(cmd: ParsedCommand): cmd is Extract<ParsedCommand, { intent: 'SAVE_IDEA' }> {
   return cmd.intent === 'SAVE_IDEA';
+}
+
+/** True when the command is safe to act on for birthday persistence (US3). */
+export function isSetBirthdayReminder(
+  cmd: ParsedCommand,
+): cmd is Extract<ParsedCommand, { intent: 'SET_BIRTHDAY_REMINDER' }> {
+  return cmd.intent === 'SET_BIRTHDAY_REMINDER';
 }

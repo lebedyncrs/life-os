@@ -9,6 +9,10 @@ export class PrismaOwnerReadRepository extends OwnerReadRepository {
     super();
   }
 
+  async findById(ownerId: string): Promise<Owner | null> {
+    return this.prisma.owner.findUnique({ where: { id: ownerId } });
+  }
+
   async findByTelegramChatId(chatId: bigint): Promise<Owner | null> {
     return this.prisma.owner.findFirst({
       where: { telegramChatId: chatId },

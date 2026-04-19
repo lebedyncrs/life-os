@@ -4,6 +4,8 @@ import { Bot } from 'grammy';
 import type { Context } from 'grammy';
 import type { Env } from '../../infrastructure/config/env.schema';
 
+const MAX_AUDIO_DURATION_SEC = 600;
+
 @Injectable()
 export class VoiceIngestService {
   private readonly logger = new Logger(VoiceIngestService.name);
@@ -14,12 +16,36 @@ export class VoiceIngestService {
   ) {}
 
   /**
-   * Downloads Telegram voice file and transcribes via OpenAI-compatible Whisper endpoint.
+   * Downloads Telegram `voice` or short `audio` and transcribes via OpenAI-compatible Whisper endpoint.
    * Returns null when transcription is unavailable (caller should prompt user to retry).
    */
   async transcribeVoiceMessage(ctx: Context): Promise<string | null> {
     const msg = ctx.message;
-    if (!msg || !('voice' in msg) || !msg.voice) {
+    if (!msg) {
+      return null;
+    }
+
+    let fileId: string | undefined;
+    let uploadName = 'voice.ogg';
+
+    if ('voice' in msg && msg.voice) {
+      fileId = msg.voice.file_id;
+      const mt = msg.voice.mime_type ?? '';
+      uploadName = mt.includes('ogg') ? 'voice.ogg' : 'voice.oga';
+    } else if ('audio' in msg && msg.audio) {
+      const a = msg.audio;
+      if (!a.duration || a.duration > MAX_AUDIO_DURATION_SEC) {
+        this.logger.debug('Skipping audio: missing duration or too long for voice-style ingest');
+        return null;
+      }
+      fileId = a.file_id;
+      const ext = (a.mime_type?.split('/')[1] ?? 'mpeg').replace(/[^a-z0-9]/gi, '') || 'mpeg';
+      uploadName = `audio.${ext}`;
+    } else {
+      return null;
+    }
+
+    if (!fileId) {
       return null;
     }
 
@@ -34,7 +60,7 @@ export class VoiceIngestService {
     }
 
     try {
-      const file = await ctx.getFile();
+      const file = await ctx.api.getFile(fileId);
       const path = file.file_path;
       if (!path) {
         return null;
@@ -46,9 +72,8 @@ export class VoiceIngestService {
         return null;
       }
       const buf = Buffer.from(await audioRes.arrayBuffer());
-      const ext = path.split('.').pop() ?? 'ogg';
       const form = new FormData();
-      form.append('file', new Blob([buf]), `voice.${ext}`);
+      form.append('file', new Blob([buf]), uploadName);
       form.append('model', 'whisper-1');
 
       const tr = await fetch(`${baseUrl}/audio/transcriptions`, {

@@ -30,6 +30,14 @@ decisions and alternatives.
 **Constraints**: No raw voice persistence after transcript; secrets in env only; single-tenant MVP; reminders must be idempotent per firing key  
 **Scale/Scope**: One owner, thousands of entities per type, low QPS; design keeps multi-tenant evolution possible (owner_id on all rows)
 
+**Local integration** (post-implementation notes, 2026-04-19):
+
+- **CORS**: Development allows credentialed requests from `http(s)://localhost:*` and
+  `127.0.0.1:*` in addition to `WEB_ORIGIN`; production allows only `WEB_ORIGIN`.
+- **Telegram + ngrok**: Tunnel forwards to the same **`PORT`** the Nest app uses;
+  `setWebhook` URL is `https://<tunnel>/telegram/webhook/<TELEGRAM_WEBHOOK_SECRET>`.
+- **Single listen**: One `start:dev` per `PORT`; duplicate process → `EADDRINUSE`.
+
 ## Constitution Check
 
 *GATE: Passed before Phase 0 research. Re-checked after Phase 1 design.*

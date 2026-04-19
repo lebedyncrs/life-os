@@ -34,6 +34,6 @@ export class TelegramDevLinkService implements OnApplicationBootstrap {
         telegramLinkToken: null,
       },
     });
-    this.logger.log(`Linked Telegram chat id ${raw} to owner ${owner.email}`);
+    this.logger.log(`Linked Telegram chat id ${raw} to owner ${owner.id}`);
   }
 }
