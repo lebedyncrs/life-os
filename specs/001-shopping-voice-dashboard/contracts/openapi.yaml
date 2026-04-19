@@ -1,0 +1,356 @@
+openapi: 3.0.3
+info:
+  title: Life OS Dashboard API
+  version: 0.1.0
+  description: >
+    Authenticated HTTP API for the Life OS web dashboard (MVP). All routes
+    require a session cookie established via POST /auth/login unless noted.
+
+servers:
+  - url: https://api.example.com
+    description: Production (placeholder)
+  - url: http://localhost:3000
+    description: Local NestJS
+
+tags:
+  - name: Auth
+  - name: Shopping
+  - name: Ideas
+  - name: Birthdays
+  - name: Habits
+  - name: Dashboard
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Establish session cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "204":
+          description: Session cookie set (no body)
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Clear session
+      responses:
+        "204":
+          description: Cookie cleared
+
+  /me:
+    get:
+      tags: [Auth]
+      summary: Current owner profile
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerProfile"
+        "401":
+          description: Unauthenticated
+
+  /dashboard/home:
+    get:
+      tags: [Dashboard]
+      summary: Aggregated payload for home screen (optional convenience)
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Bundled sections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardHome"
+
+  /shopping-items:
+    get:
+      tags: [Shopping]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShoppingListItem"
+    post:
+      tags: [Shopping]
+      security:
+        - cookieAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  maxLength: 500
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingListItem"
+
+  /shopping-items/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Shopping]
+      security:
+        - cookieAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                is_done:
+                  type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingListItem"
+    delete:
+      tags: [Shopping]
+      security:
+        - cookieAuth: []
+      responses:
+        "204":
+          description: Deleted
+
+  /ideas:
+    get:
+      tags: [Ideas]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Idea"
+    post:
+      tags: [Ideas]
+      security:
+        - cookieAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  maxLength: 10000
+                title:
+                  type: string
+                  maxLength: 200
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Idea"
+
+  /ideas/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Ideas]
+      security:
+        - cookieAuth: []
+      responses:
+        "204":
+          description: Deleted
+
+  /birthdays:
+    get:
+      tags: [Birthdays]
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BirthdayReminder"
+
+  /habits/summary:
+    get:
+      tags: [Habits]
+      summary: Weekly training summary for dashboard tile
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: week
+          in: query
+          schema:
+            type: string
+            description: ISO week date Monday (YYYY-MM-DD)
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HabitWeekSummary"
+
+  /habits/training-sessions:
+    post:
+      tags: [Habits]
+      security:
+        - cookieAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [occurred_on]
+              properties:
+                occurred_on:
+                  type: string
+                  format: date
+                label:
+                  type: string
+                  default: training
+      responses:
+        "201":
+          description: Logged
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: lifeos_session
+
+  schemas:
+    OwnerProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        timezone:
+          type: string
+        telegram_linked:
+          type: boolean
+
+    ShoppingListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        is_done:
+          type: boolean
+        source:
+          type: string
+          enum: [telegram_voice, telegram_text, dashboard]
+        created_at:
+          type: string
+          format: date-time
+
+    Idea:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    BirthdayReminder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        person_name:
+          type: string
+        next_occurrence_on:
+          type: string
+          format: date
+        lead_days:
+          type: integer
+
+    HabitWeekSummary:
+      type: object
+      properties:
+        week_start:
+          type: string
+          format: date
+        training_count:
+          type: integer
+
+    DashboardHome:
+      type: object
+      properties:
+        shopping_items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShoppingListItem"
+        ideas:
+          type: array
+          items:
+            $ref: "#/components/schemas/Idea"
+        birthdays:
+          type: array
+          items:
+            $ref: "#/components/schemas/BirthdayReminder"
+        habit_week:
+          $ref: "#/components/schemas/HabitWeekSummary"

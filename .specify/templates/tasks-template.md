@@ -58,6 +58,10 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
+**Constitution**: Foundational work MUST establish OOP boundaries, quality gates,
+scalability hooks, and **secrets/auth** for web, Telegram, and API ingress per
+`.specify/memory/constitution.md` and plan.md.
+
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
 Examples of foundational tasks (adjust based on your project):

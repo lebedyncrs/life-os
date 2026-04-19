@@ -1,0 +1,12 @@
+node_modules
+.git
+.gitignore
+*.md
+.env
+.env.*
+dist
+build
+coverage
+.specify
+.cursor
+specs

@@ -1,0 +1,15 @@
+import type { Idea, IdeaSource } from '@prisma/client';
+
+export type NewIdea = {
+  body: string;
+  title?: string | null;
+  source: IdeaSource;
+};
+
+export abstract class IdeaRepository {
+  abstract create(ownerId: string, idea: NewIdea): Promise<Idea>;
+
+  abstract listByOwner(ownerId: string): Promise<Idea[]>;
+
+  abstract deleteByIdForOwner(ownerId: string, id: string): Promise<boolean>;
+}

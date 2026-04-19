@@ -31,7 +31,18 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Aligned with `.specify/memory/constitution.md` (Life OS):
+
+- **OOP**: Domain logic in cohesive objects; infrastructure behind boundaries;
+  dependency rule respected; no unjustified procedural cores.
+- **Quality**: Tests/reviews cover changed behavior and edge cases; no known
+  defects or undocumented shortcuts to meet a date.
+- **Scalability**: Growth, concurrency, and failure assumptions documented;
+  contracts and data paths compatible with stated scale; exceptions need explicit
+  justification below.
+- **Privacy & channels**: Sensitive data flows (health, habits, voice, Telegram,
+  Shortcuts) identified; auth model per surface; agent/reminder behavior and
+  logging/redaction addressed; exceptions need explicit justification below.
 
 ## Project Structure
 
